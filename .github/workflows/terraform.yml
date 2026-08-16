@@ -181,53 +181,48 @@ jobs:
       - name: Install Checkov
         shell: powershell
         run: |
+          python -m pip install --upgrade pip
           python -m pip install --upgrade checkov
+
+      - name: Checkov Version
+        shell: powershell
+        run: |
+          $scriptsPath = python -c "import sysconfig; print(sysconfig.get_path('scripts'))"
+
+          Write-Host "Python Scripts Path: $scriptsPath"
+
+          $checkovExe = Join-Path $scriptsPath "checkov.exe"
+
+          if (-not (Test-Path $checkovExe)) {
+            throw "Checkov executable not found at: $checkovExe"
+          }
+
+          Write-Host "Checkov executable: $checkovExe"
+
+          & $checkovExe --version
 
       - name: Checkov Terraform Scan
         shell: powershell
         run: |
+          $scriptsPath = python -c "import sysconfig; print(sysconfig.get_path('scripts'))"
 
-          $checkov = Get-Command checkov.exe -ErrorAction SilentlyContinue
+          $checkovExe = Join-Path $scriptsPath "checkov.exe"
 
-          if ($checkov) {
-            Write-Host "Checkov found at: $($checkov.Source)"
-
-            & $checkov.Source `
-              -d . `
-              --framework terraform `
-              --quiet
-
-            exit $LASTEXITCODE
+          if (-not (Test-Path $checkovExe)) {
+            throw "Checkov executable not found at: $checkovExe"
           }
 
-          $checkov = Get-ChildItem `
-            "$env:LOCALAPPDATA\Python" `
-            -Filter "checkov.exe" `
-            -Recurse `
-            -ErrorAction SilentlyContinue |
-            Select-Object -First 1
+          Write-Host "Running Checkov..."
+          Write-Host "Executable: $checkovExe"
 
-          if (-not $checkov) {
-            $checkov = Get-ChildItem `
-              "$env:LOCALAPPDATA\Programs\Python" `
-              -Filter "checkov.exe" `
-              -Recurse `
-              -ErrorAction SilentlyContinue |
-              Select-Object -First 1
-          }
-
-          if (-not $checkov) {
-            throw "Checkov executable not found"
-          }
-
-          Write-Host "Checkov found at: $($checkov.FullName)"
-
-          & $checkov.FullName `
+          & $checkovExe `
             -d . `
             --framework terraform `
             --quiet
 
-          exit $LASTEXITCODE
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
 
       # ======================================================
       # TRIVY INSTALL
@@ -314,7 +309,7 @@ jobs:
       # SHOW PLAN
       # ======================================================
 
-      - name: Show Terraform Plan
+      - name: Show Plan
         shell: powershell
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
@@ -334,18 +329,6 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     runs-on: [self-hosted, Windows, X64]
-
-    # ========================================================
-    # IMPORTANT:
-    # Configure required reviewers in GitHub:
-    #
-    # Settings
-    #   → Environments
-    #     → prod
-    #       → Required reviewers
-    #
-    # This creates Production Approval before Apply.
-    # ========================================================
 
     environment:
       name: prod
