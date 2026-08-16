@@ -62,6 +62,11 @@ jobs:
         run: |
           az version
 
+      - name: Check SonarScanner CLI
+        shell: powershell
+        run: |
+          & "C:\sonar-scanner\bin\sonar-scanner.bat" --version
+
       # ======================================================
       # AZURE LOGIN
       # ======================================================
@@ -74,6 +79,22 @@ jobs:
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: |
+          if ([string]::IsNullOrWhiteSpace($env:AZURE_CLIENT_ID)) {
+            throw "AZURE_CLIENT_ID secret is missing"
+          }
+
+          if ([string]::IsNullOrWhiteSpace($env:AZURE_CLIENT_SECRET)) {
+            throw "AZURE_CLIENT_SECRET secret is missing"
+          }
+
+          if ([string]::IsNullOrWhiteSpace($env:AZURE_TENANT_ID)) {
+            throw "AZURE_TENANT_ID secret is missing"
+          }
+
+          if ([string]::IsNullOrWhiteSpace($env:AZURE_SUBSCRIPTION_ID)) {
+            throw "AZURE_SUBSCRIPTION_ID secret is missing"
+          }
+
           az login --service-principal `
             --username "$env:AZURE_CLIENT_ID" `
             --password "$env:AZURE_CLIENT_SECRET" `
@@ -81,6 +102,8 @@ jobs:
 
           az account set `
             --subscription "$env:AZURE_SUBSCRIPTION_ID"
+
+          az account show
 
       # ======================================================
       # TERRAFORM INIT
@@ -133,6 +156,9 @@ jobs:
 
       - name: SonarQube Scan
         shell: powershell
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         run: |
           & "C:\sonar-scanner\bin\sonar-scanner.bat" `
             -Dsonar.host.url="$env:SONAR_HOST_URL" `
@@ -247,6 +273,22 @@ jobs:
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: |
+          if ([string]::IsNullOrWhiteSpace($env:AZURE_CLIENT_ID)) {
+            throw "AZURE_CLIENT_ID secret is missing"
+          }
+
+          if ([string]::IsNullOrWhiteSpace($env:AZURE_CLIENT_SECRET)) {
+            throw "AZURE_CLIENT_SECRET secret is missing"
+          }
+
+          if ([string]::IsNullOrWhiteSpace($env:AZURE_TENANT_ID)) {
+            throw "AZURE_TENANT_ID secret is missing"
+          }
+
+          if ([string]::IsNullOrWhiteSpace($env:AZURE_SUBSCRIPTION_ID)) {
+            throw "AZURE_SUBSCRIPTION_ID secret is missing"
+          }
+
           az login --service-principal `
             --username "$env:AZURE_CLIENT_ID" `
             --password "$env:AZURE_CLIENT_SECRET" `
@@ -254,6 +296,8 @@ jobs:
 
           az account set `
             --subscription "$env:AZURE_SUBSCRIPTION_ID"
+
+          az account show
 
       # ======================================================
       # TERRAFORM INIT
