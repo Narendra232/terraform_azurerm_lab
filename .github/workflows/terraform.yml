@@ -1,0 +1,282 @@
+name: Terraform DevSecOps CI-CD
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'Enviroment/**'
+      - 'azureresourses/**'
+      - '.github/workflows/**'
+
+  push:
+    branches:
+      - main
+    paths:
+      - 'Enviroment/**'
+      - 'azureresourses/**'
+      - '.github/workflows/**'
+
+permissions:
+  contents: read
+  pull-requests: write
+  security-events: write
+
+env:
+  TF_VERSION: '1.9.8'
+  TF_WORKING_DIR: './Enviroment/dev'
+
+jobs:
+
+  # ==========================================================
+  # PR - DEVSECOPS CHECKS
+  # ==========================================================
+
+  terraform-security:
+    name: Terraform DevSecOps Checks
+    if: github.event_name == 'pull_request'
+    runs-on: [self-hosted, Windows, X64]
+
+    steps:
+
+      # ------------------------------------------------------
+      # Checkout
+      # ------------------------------------------------------
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ------------------------------------------------------
+      # Terraform Version
+      # ------------------------------------------------------
+
+      - name: Check Terraform Version
+        shell: powershell
+        run: |
+          terraform version
+
+      # ------------------------------------------------------
+      # Azure CLI
+      # ------------------------------------------------------
+
+      - name: Check Azure CLI
+        shell: powershell
+        run: |
+          az version
+
+      # ------------------------------------------------------
+      # Terraform Init
+      # ------------------------------------------------------
+
+      - name: Terraform Init
+        shell: powershell
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform init -input=false
+
+      # ------------------------------------------------------
+      # Terraform Format
+      # ------------------------------------------------------
+
+      - name: Terraform Format Check
+        shell: powershell
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform fmt -check -recursive
+
+      # ------------------------------------------------------
+      # Terraform Validate
+      # ------------------------------------------------------
+
+      - name: Terraform Validate
+        shell: powershell
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform validate
+
+      # ======================================================
+      # GITLEAKS
+      # ======================================================
+
+      - name: Gitleaks Secret Scan
+        shell: powershell
+        run: |
+          gitleaks version
+          gitleaks detect --source . --verbose --redact
+
+      # ======================================================
+      # SONARQUBE
+      # ======================================================
+
+      - name: SonarQube Scan
+        shell: powershell
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        run: |
+          sonar-scanner `
+            -Dsonar.host.url="$env:SONAR_HOST_URL" `
+            -Dsonar.token="$env:SONAR_TOKEN"
+
+      # ======================================================
+      # TFLINT
+      # ======================================================
+
+      - name: TFLint Init
+        shell: powershell
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          tflint --init
+
+      - name: TFLint
+        shell: powershell
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          tflint --format compact
+
+      # ======================================================
+      # CHECKOV
+      # ======================================================
+
+      - name: Checkov Terraform Scan
+        shell: powershell
+        run: |
+          checkov -d . --framework terraform --quiet
+
+      # ======================================================
+      # TRIVY
+      # ======================================================
+
+      - name: Trivy IaC Scan
+        shell: powershell
+        run: |
+          trivy config . `
+            --severity HIGH,CRITICAL `
+            --exit-code 1 `
+            --ignore-unfixed
+
+      # ======================================================
+      # TERRAFORM PLAN
+      # ======================================================
+
+      - name: Terraform Plan
+        shell: powershell
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform plan `
+            -input=false `
+            -out=tfplan
+
+      # ======================================================
+      # SAVE PLAN
+      # ======================================================
+
+      - name: Show Terraform Plan
+        shell: powershell
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform show -no-color tfplan
+
+
+  # ==========================================================
+  # MAIN - APPLY
+  # ==========================================================
+
+  terraform-apply:
+    name: Terraform Apply
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, Windows, X64]
+
+    environment:
+      name: prod
+
+    steps:
+
+      # ------------------------------------------------------
+      # Checkout
+      # ------------------------------------------------------
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ------------------------------------------------------
+      # Check Terraform
+      # ------------------------------------------------------
+
+      - name: Check Terraform
+        shell: powershell
+        run: |
+          terraform version
+
+      # ------------------------------------------------------
+      # Azure CLI
+      # ------------------------------------------------------
+
+      - name: Check Azure CLI
+        shell: powershell
+        run: |
+          az version
+
+      # ------------------------------------------------------
+      # Azure Authentication
+      # ------------------------------------------------------
+
+      - name: Azure Login
+        shell: powershell
+        run: |
+          az login --service-principal `
+            --username "${{ secrets.AZURE_CLIENT_ID }}" `
+            --password "${{ secrets.AZURE_CLIENT_SECRET }}" `
+            --tenant "${{ secrets.AZURE_TENANT_ID }}"
+
+          az account set `
+            --subscription "${{ env.AZURE_SUBSCRIPTION_ID }}"
+
+      # ------------------------------------------------------
+      # Terraform Init
+      # ------------------------------------------------------
+
+      - name: Terraform Init
+        shell: powershell
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform init -input=false
+
+      # ------------------------------------------------------
+      # Terraform Validate
+      # ------------------------------------------------------
+
+      - name: Terraform Validate
+        shell: powershell
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform validate
+
+      # ------------------------------------------------------
+      # Terraform Plan
+      # ------------------------------------------------------
+
+      - name: Terraform Plan
+        shell: powershell
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform plan `
+            -input=false `
+            -out=tfplan
+
+      # ------------------------------------------------------
+      # Terraform Apply
+      # ------------------------------------------------------
+
+      - name: Terraform Apply
+        shell: powershell
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform apply `
+            -input=false `
+            -auto-approve `
+            tfplan
