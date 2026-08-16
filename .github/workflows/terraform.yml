@@ -133,9 +133,6 @@ jobs:
 
       - name: SonarQube Scan
         shell: powershell
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         run: |
           & "C:\sonar-scanner\bin\sonar-scanner.bat" `
             -Dsonar.host.url="$env:SONAR_HOST_URL" `
