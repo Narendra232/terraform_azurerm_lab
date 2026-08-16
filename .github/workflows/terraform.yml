@@ -182,28 +182,63 @@ jobs:
         shell: powershell
         run: |
 
-          $trivyVersion = "0.66.0"
           $trivyDir = "C:\trivy"
           $trivyExe = "$trivyDir\trivy.exe"
 
+          Write-Host "Checking Trivy installation..."
+
           if (-not (Test-Path $trivyExe)) {
 
-            Write-Host "Installing Trivy $trivyVersion..."
+            Write-Host "Trivy not found. Installing..."
 
             New-Item `
               -ItemType Directory `
               -Force `
               -Path $trivyDir | Out-Null
 
-            $zip = "$env:TEMP\trivy.zip"
+            # Get latest Trivy release
+            $release = Invoke-RestMethod `
+              -Uri "https://api.github.com/repos/aquasecurity/trivy/releases/latest"
 
-            $url = "https://github.com/aquasecurity/trivy/releases/download/v$trivyVersion/trivy_${trivyVersion}_Windows-64bit.zip"
+            if (-not $release) {
+              throw "Unable to retrieve latest Trivy release."
+            }
+
+            Write-Host "Latest Trivy release:"
+            Write-Host $release.tag_name
+
+            # Find Windows 64-bit ZIP
+            $asset = $release.assets |
+              Where-Object {
+                $_.name -match "Windows-64bit.zip$"
+              } |
+              Select-Object -First 1
+
+            if (-not $asset) {
+              Write-Host "Available assets:"
+              $release.assets | ForEach-Object {
+                Write-Host $_.name
+              }
+
+              throw "Trivy Windows 64-bit ZIP was not found."
+            }
+
+            Write-Host "Trivy download URL:"
+            Write-Host $asset.browser_download_url
+
+            $zip = "$env:TEMP\trivy.zip"
 
             Write-Host "Downloading Trivy..."
 
             Invoke-WebRequest `
-              -Uri $url `
+              -Uri $asset.browser_download_url `
               -OutFile $zip
+
+            if (-not (Test-Path $zip)) {
+              throw "Trivy ZIP download failed."
+            }
+
+            Write-Host "Extracting Trivy..."
 
             Expand-Archive `
               -Path $zip `
@@ -219,6 +254,10 @@ jobs:
           if (-not (Test-Path $trivyExe)) {
             throw "Trivy installation failed. trivy.exe not found."
           }
+
+          Write-Host "======================================"
+          Write-Host "Trivy installed successfully"
+          Write-Host "======================================"
 
           Write-Host "Trivy location:"
           Write-Host $trivyExe
