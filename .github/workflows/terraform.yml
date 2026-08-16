@@ -212,7 +212,7 @@ jobs:
 
     # GitHub Environment Approval
     environment:
-      name: prod
+      name: dev
 
     steps:
 
