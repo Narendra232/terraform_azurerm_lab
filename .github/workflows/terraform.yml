@@ -175,114 +175,6 @@ jobs:
           tflint --format compact
 
       # ======================================================
-      # TRIVY INSTALL
-      # ======================================================
-
-      - name: Install Trivy
-        shell: powershell
-        run: |
-
-          $trivyDir = "C:\trivy"
-          $trivyExe = "$trivyDir\trivy.exe"
-
-          Write-Host "Checking Trivy installation..."
-
-          if (-not (Test-Path $trivyExe)) {
-
-            Write-Host "Trivy not found. Installing..."
-
-            New-Item `
-              -ItemType Directory `
-              -Force `
-              -Path $trivyDir | Out-Null
-
-            # Get latest Trivy release
-            $release = Invoke-RestMethod `
-              -Uri "https://api.github.com/repos/aquasecurity/trivy/releases/latest"
-
-            if (-not $release) {
-              throw "Unable to retrieve latest Trivy release."
-            }
-
-            Write-Host "Latest Trivy release:"
-            Write-Host $release.tag_name
-
-            # Find Windows 64-bit ZIP
-            $asset = $release.assets |
-              Where-Object {
-                $_.name -match "Windows-64bit.zip$"
-              } |
-              Select-Object -First 1
-
-            if (-not $asset) {
-              Write-Host "Available assets:"
-              $release.assets | ForEach-Object {
-                Write-Host $_.name
-              }
-
-              throw "Trivy Windows 64-bit ZIP was not found."
-            }
-
-            Write-Host "Trivy download URL:"
-            Write-Host $asset.browser_download_url
-
-            $zip = "$env:TEMP\trivy.zip"
-
-            Write-Host "Downloading Trivy..."
-
-            Invoke-WebRequest `
-              -Uri $asset.browser_download_url `
-              -OutFile $zip
-
-            if (-not (Test-Path $zip)) {
-              throw "Trivy ZIP download failed."
-            }
-
-            Write-Host "Extracting Trivy..."
-
-            Expand-Archive `
-              -Path $zip `
-              -DestinationPath $trivyDir `
-              -Force
-
-            Remove-Item `
-              $zip `
-              -Force `
-              -ErrorAction SilentlyContinue
-          }
-
-          if (-not (Test-Path $trivyExe)) {
-            throw "Trivy installation failed. trivy.exe not found."
-          }
-
-          Write-Host "======================================"
-          Write-Host "Trivy installed successfully"
-          Write-Host "======================================"
-
-          Write-Host "Trivy location:"
-          Write-Host $trivyExe
-
-          Write-Host "Trivy version:"
-          & $trivyExe --version
-
-          Add-Content `
-            $env:GITHUB_PATH `
-            $trivyDir
-
-      # ======================================================
-      # TRIVY IaC SCAN
-      # ======================================================
-
-      - name: Trivy IaC Scan
-        shell: powershell
-        run: |
-
-          & "C:\trivy\trivy.exe" config . `
-            --severity HIGH,CRITICAL `
-            --exit-code 1 `
-            --ignore-unfixed
-
-      # ======================================================
       # TERRAFORM PLAN
       # ======================================================
 
@@ -290,7 +182,6 @@ jobs:
         shell: powershell
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
-
           terraform plan `
             -input=false `
             -out=tfplan
@@ -303,7 +194,6 @@ jobs:
         shell: powershell
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
-
           terraform show `
             -no-color `
             tfplan
@@ -362,7 +252,6 @@ jobs:
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
         run: |
-
           if ([string]::IsNullOrWhiteSpace($env:AZURE_CLIENT_ID)) {
             throw "AZURE_CLIENT_ID secret is missing"
           }
@@ -417,7 +306,6 @@ jobs:
         shell: powershell
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
-
           terraform plan `
             -input=false `
             -out=tfplan
@@ -430,7 +318,6 @@ jobs:
         shell: powershell
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
-
           terraform apply `
             -input=false `
             -auto-approve `
