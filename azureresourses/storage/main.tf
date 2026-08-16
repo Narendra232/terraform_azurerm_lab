@@ -21,35 +21,15 @@ resource "azurerm_storage_account" "storage" {
 
   # CKV2_AZURE_38 - Soft delete for blobs and containers
   blob_properties {
-    # CKV2_AZURE_21 - Enable blob read/write/delete logging
-    logging {
-      delete                = true
-      read                  = true
-      write                 = true
-      version               = "1.0"
-      retention_policy_days = 7
-    }
-
     delete_retention_policy {
       days = 7
     }
-
     container_delete_retention_policy {
       days = 7
     }
   }
 
-  # CKV_AZURE_33 - Enable Queue service logging
-  queue_properties {
-    logging {
-      delete                = true
-      read                  = true
-      write                 = true
-      version               = "1.0"
-      retention_policy_days = 7
-    }
-  }
-
+  
   # CKV2_AZURE_41 - SAS expiration policy
   sas_policy {
     expiration_period = "00.01:00:00"
