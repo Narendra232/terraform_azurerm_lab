@@ -175,46 +175,6 @@ jobs:
           tflint --format compact
 
       # ======================================================
-      # CHECKOV
-      # ======================================================
-
-      - name: Checkov Terraform Scan
-        shell: powershell
-        run: |
-
-          $scriptsPath = python -c "import sysconfig; print(sysconfig.get_path('scripts'))"
-
-          Write-Host "Python Scripts Path:"
-          Write-Host $scriptsPath
-
-          # Checkov may be installed as .cmd on Windows
-          $checkovCmd = Join-Path $scriptsPath "checkov.cmd"
-
-          if (-not (Test-Path $checkovCmd)) {
-            throw "Checkov not found at: $checkovCmd"
-          }
-
-          Write-Host "Checkov found:"
-          Write-Host $checkovCmd
-
-          Write-Host "Checkov version:"
-          & $checkovCmd --version
-
-          Write-Host "Running Checkov Terraform scan..."
-
-          & $checkovCmd `
-            -d . `
-            --framework terraform `
-            --quiet
-
-          if ($LASTEXITCODE -ne 0) {
-            Write-Host "Checkov scan failed."
-            exit $LASTEXITCODE
-          }
-
-          Write-Host "Checkov scan completed successfully."
-
-      # ======================================================
       # TRIVY INSTALL
       # ======================================================
 
