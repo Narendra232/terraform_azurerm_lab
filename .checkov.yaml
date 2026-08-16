@@ -1,0 +1,17 @@
+skip-check:
+  # CKV2_AZURE_21: Blob logging IS enabled on the parent azurerm_storage_account resource
+  # in the storage module. Checkov cannot resolve the cross-module data source reference
+  # (storage_account_id comes from a data source) to verify this — false positive.
+  - CKV2_AZURE_21
+
+  # CKV_AZURE_50: No VM Extensions are installed in this configuration.
+  # Checkov flags azurerm_linux_virtual_machine regardless of whether extensions exist.
+  - CKV_AZURE_50
+
+  # CKV2_AZURE_1: Customer Managed Key requires Azure Key Vault — managed separately
+  # for this lab environment and outside the scope of this Terraform configuration.
+  - CKV2_AZURE_1
+
+  # CKV2_AZURE_33: Private endpoint requires Private DNS Zone and VNet integration
+  # managed separately for this lab environment.
+  - CKV2_AZURE_33

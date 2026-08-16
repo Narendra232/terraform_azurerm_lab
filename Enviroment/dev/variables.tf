@@ -18,7 +18,8 @@ variable "stg" {
 variable "cnt" {
   type = map(object({
     name                  = string
-    storage_account_id    = string
+    storage_account_name  = string
+    resource_group_name   = string
     container_access_type = string
   }))
 }
@@ -35,6 +36,7 @@ variable "vnets" {
 variable "subnets" {
   type = map(object({
     name                 = string
+    location             = string
     resource_group_name  = string
     virtual_network_name = string
     address_prefixes     = list(string)
@@ -65,30 +67,12 @@ variable "nics" {
 
 variable "vms" {
   type = map(object({
-    name                  = string
-    location              = string
-    resource_group_name   = string
-    network_interface_ids = list(string)
-    vm_size               = string
-    storage_image_reference = object({
-      publisher = string
-      offer     = string
-      sku       = string
-      version   = string
-    })
-    storage_os_disk = object({
-      name              = string
-      caching           = string
-      create_option     = string
-      managed_disk_type = string
-    })
-    os_profile = object({
-      computer_name  = string
-      admin_username = string
-      admin_password = string
-    })
-    os_profile_linux_config = object({
-      disable_password_authentication = bool
-    })
+    name                = string
+    location            = string
+    resource_group_name = string
+    size                = string
+    admin_username      = string
+    # CKV_AZURE_1 / CKV_AZURE_149 / CKV_AZURE_178 - SSH key auth
+    ssh_public_key = string
   }))
 }
