@@ -6,6 +6,6 @@ variable "vms" {
     size                = string
     admin_username      = string
     nic_name            = string
-    ssh_public_key      = string
+    admin_password      = string
   }))
 }
