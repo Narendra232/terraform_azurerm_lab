@@ -39,36 +39,52 @@ jobs:
 
     steps:
 
-      # ------------------------------------------------------
-      # Checkout
-      # ------------------------------------------------------
+      # ======================================================
+      # CHECKOUT
+      # ======================================================
 
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # ------------------------------------------------------
-      # Terraform Version
-      # ------------------------------------------------------
+      # ======================================================
+      # TOOL CHECK
+      # ======================================================
 
-      - name: Check Terraform Version
+      - name: Check Terraform
         shell: powershell
         run: |
           terraform version
-
-      # ------------------------------------------------------
-      # Azure CLI
-      # ------------------------------------------------------
 
       - name: Check Azure CLI
         shell: powershell
         run: |
           az version
 
-      # ------------------------------------------------------
-      # Terraform Init
-      # ------------------------------------------------------
+      # ======================================================
+      # AZURE LOGIN
+      # ======================================================
+
+      - name: Azure Login
+        shell: powershell
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          az login --service-principal `
+            --username "$env:AZURE_CLIENT_ID" `
+            --password "$env:AZURE_CLIENT_SECRET" `
+            --tenant "$env:AZURE_TENANT_ID"
+
+          az account set `
+            --subscription "$env:AZURE_SUBSCRIPTION_ID"
+
+      # ======================================================
+      # TERRAFORM INIT
+      # ======================================================
 
       - name: Terraform Init
         shell: powershell
@@ -76,9 +92,9 @@ jobs:
         run: |
           terraform init -input=false
 
-      # ------------------------------------------------------
-      # Terraform Format
-      # ------------------------------------------------------
+      # ======================================================
+      # TERRAFORM FORMAT
+      # ======================================================
 
       - name: Terraform Format Check
         shell: powershell
@@ -86,9 +102,9 @@ jobs:
         run: |
           terraform fmt -check -recursive
 
-      # ------------------------------------------------------
-      # Terraform Validate
-      # ------------------------------------------------------
+      # ======================================================
+      # TERRAFORM VALIDATE
+      # ======================================================
 
       - name: Terraform Validate
         shell: powershell
@@ -110,13 +126,18 @@ jobs:
       # SONARQUBE
       # ======================================================
 
+      - name: Verify SonarScanner
+        shell: powershell
+        run: |
+          & "C:\sonar-scanner\bin\sonar-scanner.bat" --version
+
       - name: SonarQube Scan
         shell: powershell
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         run: |
-          sonar-scanner `
+          & "C:\sonar-scanner\bin\sonar-scanner.bat" `
             -Dsonar.host.url="$env:SONAR_HOST_URL" `
             -Dsonar.token="$env:SONAR_TOKEN"
 
@@ -170,7 +191,7 @@ jobs:
             -out=tfplan
 
       # ======================================================
-      # SAVE PLAN
+      # SHOW PLAN
       # ======================================================
 
       - name: Show Terraform Plan
@@ -181,7 +202,7 @@ jobs:
 
 
   # ==========================================================
-  # MAIN - APPLY
+  # MAIN - TERRAFORM APPLY
   # ==========================================================
 
   terraform-apply:
@@ -194,51 +215,52 @@ jobs:
 
     steps:
 
-      # ------------------------------------------------------
-      # Checkout
-      # ------------------------------------------------------
+      # ======================================================
+      # CHECKOUT
+      # ======================================================
 
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # ------------------------------------------------------
-      # Check Terraform
-      # ------------------------------------------------------
+      # ======================================================
+      # TOOL CHECK
+      # ======================================================
 
       - name: Check Terraform
         shell: powershell
         run: |
           terraform version
 
-      # ------------------------------------------------------
-      # Azure CLI
-      # ------------------------------------------------------
-
       - name: Check Azure CLI
         shell: powershell
         run: |
           az version
 
-      # ------------------------------------------------------
-      # Azure Authentication
-      # ------------------------------------------------------
+      # ======================================================
+      # AZURE LOGIN
+      # ======================================================
 
       - name: Azure Login
         shell: powershell
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: |
           az login --service-principal `
-            --username "${{ secrets.AZURE_CLIENT_ID }}" `
-            --password "${{ secrets.AZURE_CLIENT_SECRET }}" `
-            --tenant "${{ secrets.AZURE_TENANT_ID }}"
+            --username "$env:AZURE_CLIENT_ID" `
+            --password "$env:AZURE_CLIENT_SECRET" `
+            --tenant "$env:AZURE_TENANT_ID"
 
           az account set `
-            --subscription "${{ env.AZURE_SUBSCRIPTION_ID }}"
+            --subscription "$env:AZURE_SUBSCRIPTION_ID"
 
-      # ------------------------------------------------------
-      # Terraform Init
-      # ------------------------------------------------------
+      # ======================================================
+      # TERRAFORM INIT
+      # ======================================================
 
       - name: Terraform Init
         shell: powershell
@@ -246,9 +268,9 @@ jobs:
         run: |
           terraform init -input=false
 
-      # ------------------------------------------------------
-      # Terraform Validate
-      # ------------------------------------------------------
+      # ======================================================
+      # TERRAFORM VALIDATE
+      # ======================================================
 
       - name: Terraform Validate
         shell: powershell
@@ -256,9 +278,9 @@ jobs:
         run: |
           terraform validate
 
-      # ------------------------------------------------------
-      # Terraform Plan
-      # ------------------------------------------------------
+      # ======================================================
+      # TERRAFORM PLAN
+      # ======================================================
 
       - name: Terraform Plan
         shell: powershell
@@ -268,9 +290,9 @@ jobs:
             -input=false `
             -out=tfplan
 
-      # ------------------------------------------------------
-      # Terraform Apply
-      # ------------------------------------------------------
+      # ======================================================
+      # TERRAFORM APPLY
+      # ======================================================
 
       - name: Terraform Apply
         shell: powershell
