@@ -40,5 +40,5 @@ module "vm" {
   depends_on = [module.nic]
   source     = "../../azureresourses/vms"
   vms        = var.vms
-  
+
 }
