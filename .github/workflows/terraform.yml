@@ -67,6 +67,21 @@ jobs:
         run: |
           & "C:\sonar-scanner\bin\sonar-scanner.bat" --version
 
+      - name: Check Gitleaks
+        shell: powershell
+        run: |
+          gitleaks version
+
+      - name: Check TFLint
+        shell: powershell
+        run: |
+          tflint --version
+
+      - name: Check Trivy
+        shell: powershell
+        run: |
+          trivy --version
+
       # ======================================================
       # AZURE LOGIN
       # ======================================================
@@ -78,6 +93,7 @@ jobs:
           AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
         run: |
           if ([string]::IsNullOrWhiteSpace($env:AZURE_CLIENT_ID)) {
             throw "AZURE_CLIENT_ID secret is missing"
@@ -142,8 +158,10 @@ jobs:
       - name: Gitleaks Secret Scan
         shell: powershell
         run: |
-          gitleaks version
-          gitleaks detect --source . --verbose --redact
+          gitleaks detect `
+            --source . `
+            --verbose `
+            --redact
 
       # ======================================================
       # TFLINT
@@ -168,21 +186,84 @@ jobs:
       - name: Install Checkov
         shell: powershell
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install checkov
+          python -m pip install --upgrade checkov
 
-      - name: Checkov Version
+      - name: Locate Checkov
         shell: powershell
         run: |
-          python -m checkov --version
+          $checkov = Get-Command checkov.exe -ErrorAction SilentlyContinue
+
+          if ($checkov) {
+            Write-Host "Checkov found at:"
+            Write-Host $checkov.Source
+            & $checkov.Source --version
+            exit 0
+          }
+
+          $checkov = Get-ChildItem `
+            "$env:LOCALAPPDATA\Python" `
+            -Filter "checkov.exe" `
+            -Recurse `
+            -ErrorAction SilentlyContinue |
+            Select-Object -First 1
+
+          if (-not $checkov) {
+            $checkov = Get-ChildItem `
+              "$env:LOCALAPPDATA\Programs\Python" `
+              -Filter "checkov.exe" `
+              -Recurse `
+              -ErrorAction SilentlyContinue |
+              Select-Object -First 1
+          }
+
+          if (-not $checkov) {
+            throw "Checkov executable not found"
+          }
+
+          Write-Host "Checkov found at:"
+          Write-Host $checkov.FullName
+
+          & $checkov.FullName --version
 
       - name: Checkov Terraform Scan
         shell: powershell
         run: |
-          python -m checkov `
+          $checkov = Get-Command checkov.exe -ErrorAction SilentlyContinue
+
+          if ($checkov) {
+            & $checkov.Source `
+              -d . `
+              --framework terraform `
+              --quiet
+            exit $LASTEXITCODE
+          }
+
+          $checkov = Get-ChildItem `
+            "$env:LOCALAPPDATA\Python" `
+            -Filter "checkov.exe" `
+            -Recurse `
+            -ErrorAction SilentlyContinue |
+            Select-Object -First 1
+
+          if (-not $checkov) {
+            $checkov = Get-ChildItem `
+              "$env:LOCALAPPDATA\Programs\Python" `
+              -Filter "checkov.exe" `
+              -Recurse `
+              -ErrorAction SilentlyContinue |
+              Select-Object -First 1
+          }
+
+          if (-not $checkov) {
+            throw "Checkov executable not found"
+          }
+
+          & $checkov.FullName `
             -d . `
             --framework terraform `
             --quiet
+
+          exit $LASTEXITCODE
 
       # ======================================================
       # TRIVY
@@ -226,8 +307,11 @@ jobs:
   terraform-apply:
     name: Terraform Apply
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
     runs-on: [self-hosted, Windows, X64]
 
+    # GitHub Environment protection.
+    # Configure required reviewers on "prod".
     environment:
       name: prod
 
@@ -267,6 +351,7 @@ jobs:
           AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
         run: |
           if ([string]::IsNullOrWhiteSpace($env:AZURE_CLIENT_ID)) {
             throw "AZURE_CLIENT_ID secret is missing"
