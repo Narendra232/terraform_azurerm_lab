@@ -1,0 +1,19 @@
+title = "gitleaks config"
+
+[allowlist]
+description = "Allowlist false positive secret placeholder references in GitHub workflow files"
+regexes = [
+  '''secrets\.TANENTID''',
+  '''secrets\.AZURE_CLIENTID''',
+  '''secrets\.AZURE_CLIENTSECRET''',
+  '''secrets\.SUBSCUPTIONID'''
+]
+stopwords = [
+  "TANENTID",
+  "AZURE_CLIENTID",
+  "AZURE_CLIENTSECRET",
+  "SUBSCUPTIONID"
+]
+fingerprints = [
+  "3b06c53a9e2f88d6589dc3ae5e91d0cda2661afc:.github/workflows/terraform.yml:generic-api-key:30"
+]

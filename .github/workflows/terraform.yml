@@ -1,0 +1,324 @@
+name: Terraform DevSecOps CI-CD
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'Enviroment/**'
+      - 'azureresourses/**'
+      - '.github/workflows/**'
+
+  push:
+    branches:
+      - main
+    paths:
+      - 'Enviroment/**'
+      - 'azureresourses/**'
+      - '.github/workflows/**'
+
+permissions:
+  contents: read
+  pull-requests: write
+  security-events: write
+
+env:
+  TF_VERSION: '1.9.8'
+  TF_WORKING_DIR: './Enviroment/dev'
+
+jobs:
+
+  # ==========================================================
+  # PR - DEVSECOPS CHECKS
+  # ==========================================================
+
+  terraform-security:
+    name: Terraform DevSecOps Checks
+    if: github.event_name == 'pull_request'
+    runs-on: [self-hosted, Windows, X64]
+
+    steps:
+
+      # ======================================================
+      # CHECKOUT
+      # ======================================================
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ======================================================
+      # TOOL CHECK
+      # ======================================================
+
+      - name: Check Terraform
+        shell: powershell
+        run: |
+          terraform version
+
+      - name: Check Azure CLI
+        shell: powershell
+        run: |
+          az version
+
+      - name: Check SonarScanner CLI
+        shell: powershell
+        run: |
+          & "C:\sonar-scanner\bin\sonar-scanner.bat" --version
+
+      - name: Check Gitleaks
+        shell: powershell
+        run: |
+          gitleaks version
+
+      - name: Check TFLint
+        shell: powershell
+        run: |
+          tflint --version
+
+      # ======================================================
+      # AZURE LOGIN
+      # ======================================================
+
+      - name: Azure Login
+        shell: powershell
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:AZURE_CLIENT_ID)) {
+            throw "AZURE_CLIENT_ID secret is missing"
+          }
+
+          if ([string]::IsNullOrWhiteSpace($env:AZURE_CLIENT_SECRET)) {
+            throw "AZURE_CLIENT_SECRET secret is missing"
+          }
+
+          if ([string]::IsNullOrWhiteSpace($env:AZURE_TENANT_ID)) {
+            throw "AZURE_TENANT_ID secret is missing"
+          }
+
+          if ([string]::IsNullOrWhiteSpace($env:AZURE_SUBSCRIPTION_ID)) {
+            throw "AZURE_SUBSCRIPTION_ID secret is missing"
+          }
+
+          az login --service-principal `
+            --username "$env:AZURE_CLIENT_ID" `
+            --password "$env:AZURE_CLIENT_SECRET" `
+            --tenant "$env:AZURE_TENANT_ID"
+
+          az account set `
+            --subscription "$env:AZURE_SUBSCRIPTION_ID"
+
+          az account show
+
+      # ======================================================
+      # TERRAFORM INIT
+      # ======================================================
+
+      - name: Terraform Init
+        shell: powershell
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform init -input=false
+
+      # ======================================================
+      # TERRAFORM FORMAT
+      # ======================================================
+
+      - name: Terraform Format Check
+        shell: powershell
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform fmt -check -recursive
+
+      # ======================================================
+      # TERRAFORM VALIDATE
+      # ======================================================
+
+      - name: Terraform Validate
+        shell: powershell
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform validate
+
+      # ======================================================
+      # GITLEAKS
+      # ======================================================
+
+      - name: Gitleaks Secret Scan
+        shell: powershell
+        run: |
+          gitleaks detect `
+            --source . `
+            --verbose `
+            --redact
+
+      # ======================================================
+      # TFLINT
+      # ======================================================
+
+      - name: TFLint Init
+        shell: powershell
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          tflint --init
+
+      - name: TFLint
+        shell: powershell
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          tflint --format compact
+
+      # ======================================================
+      # TERRAFORM PLAN
+      # ======================================================
+
+      - name: Terraform Plan
+        shell: powershell
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform plan `
+            -input=false `
+            -out=tfplan
+
+      # ======================================================
+      # SHOW PLAN
+      # ======================================================
+
+      - name: Show Plan
+        shell: powershell
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform show `
+            -no-color `
+            tfplan
+
+
+  # ==========================================================
+  # MAIN - TERRAFORM APPLY
+  # ==========================================================
+
+  terraform-apply:
+    name: Terraform Apply
+
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    runs-on: [self-hosted, Windows, X64]
+
+    # GitHub Environment Approval
+    environment:
+      name: dev
+
+    steps:
+
+      # ======================================================
+      # CHECKOUT
+      # ======================================================
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ======================================================
+      # TOOL CHECK
+      # ======================================================
+
+      - name: Check Terraform
+        shell: powershell
+        run: |
+          terraform version
+
+      - name: Check Azure CLI
+        shell: powershell
+        run: |
+          az version
+
+      # ======================================================
+      # AZURE LOGIN
+      # ======================================================
+
+      - name: Azure Login
+        shell: powershell
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:AZURE_CLIENT_ID)) {
+            throw "AZURE_CLIENT_ID secret is missing"
+          }
+
+          if ([string]::IsNullOrWhiteSpace($env:AZURE_CLIENT_SECRET)) {
+            throw "AZURE_CLIENT_SECRET secret is missing"
+          }
+
+          if ([string]::IsNullOrWhiteSpace($env:AZURE_TENANT_ID)) {
+            throw "AZURE_TENANT_ID secret is missing"
+          }
+
+          if ([string]::IsNullOrWhiteSpace($env:AZURE_SUBSCRIPTION_ID)) {
+            throw "AZURE_SUBSCRIPTION_ID secret is missing"
+          }
+
+          az login --service-principal `
+            --username "$env:AZURE_CLIENT_ID" `
+            --password "$env:AZURE_CLIENT_SECRET" `
+            --tenant "$env:AZURE_TENANT_ID"
+
+          az account set `
+            --subscription "$env:AZURE_SUBSCRIPTION_ID"
+
+          az account show
+
+      # ======================================================
+      # TERRAFORM INIT
+      # ======================================================
+
+      - name: Terraform Init
+        shell: powershell
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform init -input=false
+
+      # ======================================================
+      # TERRAFORM VALIDATE
+      # ======================================================
+
+      - name: Terraform Validate
+        shell: powershell
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform validate
+
+      # ======================================================
+      # TERRAFORM PLAN
+      # ======================================================
+
+      - name: Terraform Plan
+        shell: powershell
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform plan `
+            -input=false `
+            -out=tfplan
+
+      # ======================================================
+      # TERRAFORM APPLY
+      # ======================================================
+
+      - name: Terraform Apply
+        shell: powershell
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform apply `
+            -input=false `
+            -auto-approve `
+            tfplan
