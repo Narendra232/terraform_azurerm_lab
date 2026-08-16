@@ -7,19 +7,19 @@ variable "rgs" {
 }
 variable "stg" {
   type = map(object({
-    name               = string
-    location           = string
-    resource_group_name = string
-    account_tier       = string
+    name                     = string
+    location                 = string
+    resource_group_name      = string
+    account_tier             = string
     account_replication_type = string
   }))
 }
 
 variable "cnt" {
- type = map(object({
-    name                     = string
-    storage_account_id       = string
-    container_access_type    = string
+  type = map(object({
+    name                  = string
+    storage_account_id    = string
+    container_access_type = string
   }))
 }
 
@@ -65,7 +65,7 @@ variable "nics" {
 
 variable "vms" {
   type = map(object({
-    name                   = string
+    name                  = string
     location              = string
     resource_group_name   = string
     network_interface_ids = list(string)

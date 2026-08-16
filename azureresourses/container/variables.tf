@@ -1,7 +1,7 @@
 variable "cntnr" {
   type = map(object({
-    name                     = string
-    storage_account_id       = string
-    container_access_type    = string
+    name                  = string
+    storage_account_id    = string
+    container_access_type = string
   }))
 }
