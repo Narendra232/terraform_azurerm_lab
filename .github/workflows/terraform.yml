@@ -145,14 +145,6 @@ jobs:
           gitleaks version
           gitleaks detect --source . --verbose --redact
 
-       # ======================================================
-      # SONARSCANNER CLI CHECK
-      # ======================================================
-
-      - name: Verify SonarScanner CLI
-        shell: powershell
-        run: |
-          & "C:\sonar-scanner\bin\sonar-scanner.bat" --version
       # ======================================================
       # TFLINT
       # ======================================================
@@ -173,10 +165,24 @@ jobs:
       # CHECKOV
       # ======================================================
 
+      - name: Install Checkov
+        shell: powershell
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install checkov
+
+      - name: Checkov Version
+        shell: powershell
+        run: |
+          python -m checkov --version
+
       - name: Checkov Terraform Scan
         shell: powershell
         run: |
-          checkov -d . --framework terraform --quiet
+          python -m checkov `
+            -d . `
+            --framework terraform `
+            --quiet
 
       # ======================================================
       # TRIVY
