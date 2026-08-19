@@ -12,7 +12,7 @@ module "storage" {
 module "container" {
   depends_on = [module.storage]
   source     = "../../azureresourses/container"
-  cntnr      = var.cnt
+  containers = var.cnt
 }
 module "vnet" {
   depends_on = [module.resource_group]
@@ -33,4 +33,10 @@ module "nic" {
   depends_on = [module.subnet, module.public_ip]
   source     = "../../azureresourses/nic"
   nics       = var.nics
+}
+module "vm" {
+  depends_on = [module.nic]
+  source     = "../../azureresourses/vms"
+  vms        = var.vms
+
 }
