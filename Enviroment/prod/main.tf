@@ -12,7 +12,7 @@ module "storage" {
 module "container" {
   depends_on = [module.storage]
   source     = "../../azureresourses/container"
-  cntnr      = var.cnt
+  containers = var.cnt
 }
 module "vnet" {
   depends_on = [module.resource_group]
