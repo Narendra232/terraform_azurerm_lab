@@ -8,14 +8,7 @@ rgs = {
     name     = "rg2"
     location = "East US"
   }
-  rg3 = {
-    name     = "rg3"
-    location = "East US"
-  }
-  rg4 = {
-    name     = "rg4"
-    location = "East US"
-  }
+  
 }
 storage = {
   stg1 = {
