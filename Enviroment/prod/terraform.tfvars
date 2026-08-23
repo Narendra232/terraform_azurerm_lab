@@ -8,9 +8,27 @@ rgs = {
     name     = "rg2"
     location = "East US"
   }
+  
 }
+storage = {
+  stg1 = {
+    name                     = "storageaccount123654"
+    resource_group_name      = "rg1"
+    location                 = "East US"
+    account_tier             = "Standard"
+    account_replication_type = "GRS"
+  }
+}
+cnt = {
+  cnt1 = {
+    name = "container123654"
 
+    storage_account_name = "storageaccount123654"
+    resource_group_name  = "rg1"
 
+    container_access_type = "private"
+  }
+}
 
 vnets = {
   vnet1 = {
@@ -57,24 +75,11 @@ nics = {
     pip_name                      = "pip1"
   }
 }
-
 ips = {
   ip1 = {
     name                = "pip1"
     location            = "East US"
     resource_group_name = "rg1"
     allocation_method   = "Dynamic"
-  }
-}
-
-vms = {
-  vm1 = {
-    name                = "vm1"
-    location            = "East US"
-    resource_group_name = "rg1"
-    size                = "Standard_D2s_v3"
-    admin_username      = "adminuser"
-    nic_name            = "nic1"
-    admin_password      = "password!12345"
   }
 }

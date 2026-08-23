@@ -9,8 +9,25 @@ rgs = {
     location = "East US"
   }
 }
+storage = {
+  stg1 = {
+    name                     = "storageaccount123654"
+    resource_group_name      = "rg1"
+    location                 = "East US"
+    account_tier             = "Standard"
+    account_replication_type = "GRS"
+  }
+}
+cnt = {
+  cnt1 = {
+    name = "container123654"
 
+    storage_account_name = "storageaccount123654"
+    resource_group_name  = "rg1"
 
+    container_access_type = "private"
+  }
+}
 
 vnets = {
   vnet1 = {
@@ -57,7 +74,6 @@ nics = {
     pip_name                      = "pip1"
   }
 }
-
 ips = {
   ip1 = {
     name                = "pip1"
@@ -66,15 +82,37 @@ ips = {
     allocation_method   = "Dynamic"
   }
 }
-
 vms = {
   vm1 = {
-    name                = "vm1"
-    location            = "East US"
-    resource_group_name = "rg1"
-    size                = "Standard_D2s_v3"
-    admin_username      = "adminuser"
-    nic_name            = "nic1"
-    admin_password      = "password!12345"
+    name                  = "vm1"
+    location              = "East US"
+    resource_group_name   = "rg1"
+    network_interface_ids = ["${azurerm_network_interface.nic1.id}"]
+    vm_size               = "Standard_DV2s_v3"
+
+    storage_image_reference = {
+      publisher = "Canonical"
+      offer     = "UbuntuServer"
+      sku       = "18.04-LTS"
+      version   = "latest"
+    }
+
+    storage_os_disk = {
+      name              = "myosdisk1"
+      caching           = "ReadWrite"
+      create_option     = "FromImage"
+      managed_disk_type = "Standard_LRS"
+    }
+
+    os_profile = {
+      computer_name  = "hostname"
+      admin_username = "adminuser"
+      admin_password = "Password1234!"
+    }
+
+    os_profile_linux_config = {
+      disable_password_authentication = false
+    }
   }
 }
+
