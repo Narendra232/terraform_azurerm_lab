@@ -3,17 +3,6 @@ module "resource_group" {
   rgs    = var.rgs
 }
 
-module "storage" {
-  depends_on = [module.resource_group]
-  source     = "../../azureresourses/storage"
-  stg        = var.stg
-}
-
-module "container" {
-  depends_on = [module.storage]
-  source     = "../../azureresourses/container"
-  containers = var.cnt
-}
 module "vnet" {
   depends_on = [module.resource_group]
   source     = "../../azureresourses/vnets"
