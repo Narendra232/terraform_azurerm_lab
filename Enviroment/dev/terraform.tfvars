@@ -10,29 +10,7 @@ rgs = {
   }
 }
 
-stg = {
-  stg1 = {
-    name                = "storageaccount123654"
-    resource_group_name = "rg1"
-    location            = "East US"
-    account_tier        = "Standard"
 
-    account_replication_type = "GRS"
-  }
-}
-
-
-cnt = {
-  cnt1 = {
-    name = "container123654"
-
-    storage_account_name = "storageaccount123654"
-    resource_group_name  = "rg1"
-
-
-    container_access_type = "private"
-  }
-}
 
 vnets = {
   vnet1 = {
