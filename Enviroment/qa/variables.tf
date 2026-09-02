@@ -6,4 +6,4 @@ variable "subnets" {}
 variable "ips" {}
 variable "nics" {}
 variable "vms" {}
-variable "vmsize" {}
+
